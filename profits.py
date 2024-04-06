@@ -2,9 +2,17 @@ from bs4 import BeautifulSoup
 import requests
 from pymongo import MongoClient
 from datetime import datetime
-import pytz  # Import pytz for timezone handling
+import os
 
-indian_timezone = pytz.timezone('Asia/Kolkata')  # Set Indian timezone
+# Retrieve MongoDB URI from environment variables
+mongodb_uri = os.environ.get('MONGODB_URI')
+
+# Check if the URI is provided
+if mongodb_uri is None:
+    raise ValueError("MongoDB URI not found in environment variables")
+
+# Set Indian timezone
+indian_timezone = pytz.timezone('Asia/Kolkata')
 
 url = "https://minerstat.com/hardware/asics"
 
@@ -84,14 +92,11 @@ try:
             'hashrate': hashrate,
             'power': power,
             'profit': profit_data,
-            'formated_timestamp': updated_timestamp  # Add updated timestamp field
+            'updated_timestamp': updated_timestamp  # Add updated timestamp field
         })
 
-    # MongoDB Connection URI
-    uri = "mongodb+srv://ej818793:D9Lc0tVzhDSWHb8E@cluster0.n39bk48.mongodb.net/mydatabase?retryWrites=true&w=majority"
-
-    # Create a new client and connect to the server
-    client = MongoClient(uri)
+    # Connect to MongoDB
+    client = MongoClient(mongodb_uri)
 
     # Select the database
     db = client.mydatabase  # You can replace 'mydatabase' with your desired database name
