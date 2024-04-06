@@ -23,7 +23,5 @@ jobs:
           pip install requests beautifulsoup4 pymongo pytz
         
       - name: Run profits.py script and save output
-        env:
-          MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: |
           python profits.py
