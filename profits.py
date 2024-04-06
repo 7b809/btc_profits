@@ -3,6 +3,7 @@ import requests
 from pymongo import MongoClient
 from datetime import datetime
 import os
+import pytz
 
 # Retrieve MongoDB URI from environment variables
 mongodb_uri = os.environ.get('MONGODB_URI')
