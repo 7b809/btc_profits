@@ -13,7 +13,7 @@ chrome_driver_path = r"chromedriver"
 
 # Set up Chrome options
 chrome_options = ChromeOptions()
-# chrome_options.add_argument('--headless')  # Run Chrome in headless mode (no GUI)
+chrome_options.add_argument('--headless')  # Run Chrome in headless mode (no GUI)
 
 # Set up Chrome service
 chrome_service = ChromeService(executable_path=chrome_driver_path)
