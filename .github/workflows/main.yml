@@ -1,4 +1,4 @@
-name: Run Profits Script and Save Output
+name: Run Profits_1 Script
 
 on:
   schedule:
