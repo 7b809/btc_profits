@@ -1,72 +1,80 @@
-# from selenium import webdriver
-# from selenium.webdriver.chrome.service import Service as ChromeService
-# from selenium.webdriver.chrome.options import Options as ChromeOptions
-# from bs4 import BeautifulSoup
-# import json
-# from pymongo import MongoClient
-# from datetime import datetime
-# import os
-# import pytz
+import os
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from bs4 import BeautifulSoup
+from datetime import datetime
+import pytz
+from pymongo import MongoClient
 
-# # Set the path to chromedriver.exe
-# chrome_driver_path = r"chromedriver"
 
-# # Set up Chrome options
-# chrome_options = ChromeOptions()
+# Set the path to chromedriver.exe
+chrome_driver_path = r"chromedriver"
+
+# Set up Chrome options
+chrome_options = ChromeOptions()
 # chrome_options.add_argument('--headless')  # Run Chrome in headless mode (no GUI)
 
-# # Set up Chrome service
-# chrome_service = ChromeService(executable_path=chrome_driver_path)
+# Set up Chrome service
+chrome_service = ChromeService(executable_path=chrome_driver_path)
 
-# # Create a new instance of the Chrome webdriver
-# browser = webdriver.Chrome(service=chrome_service, options=chrome_options)
+# Create a new instance of the Chrome webdriver
+browser = webdriver.Chrome(service=chrome_service, options=chrome_options)
 
-# # Load the webpage
-# url = "https://hashrate.no/asics"
-# browser.get(url)
+# URL to scrape
+url = "https://hashrate.no/asics"
 
-# # Extract HTML content
-# html_content = browser.page_source
+# Open the URL in the browser
+browser.get(url)
 
-# # Close the browser
-# browser.quit()
+# Get the page source
+page_source = browser.page_source
 
-# # Parse HTML using BeautifulSoup
-# soup = BeautifulSoup(html_content, 'html.parser')
+# Close the browser
+browser.quit()
 
-# # Find the <ul> element with id="myUL"
-# ul_element = soup.find('ul', id='myUL')
+# Parse the HTML content
+soup = BeautifulSoup(page_source, 'html.parser')
 
-# # Extract data from <li> elements and organize into labeled fields
-# data_list = []
-# for li_element in ul_element.find_all('li'):
-#     # Extracting data from specific elements within <li>
-#     item_name = li_element.find('div', class_='block deviceLink').find('a').text.strip()
-#     estimated_roi = li_element.find('div', string='Estimated ROI:').find_next('div').text.strip()
-#     profit = li_element.find('div', string='Profit').find_next('div').text.strip()
-#     revenue = li_element.find('div', string='Revenue').find_next('div').text.strip()
-#     # Constructing a dictionary for each item
-#     item_data = {
-#         'miner_name': item_name,
-#         'estimated_roi': estimated_roi,
-#         'profit': profit,
-#         'revenue': revenue
-#     }
-#     data_list.append(item_data)
+# Find all the <li> elements within the specified <ul> with id="myUL"
+li_elements = soup.find('ul', id='myUL').find_all('li')
 
-# # Connect to MongoDB
-# mongodb_uri = os.environ.get('MONGODB_URI')
-# if mongodb_uri is None:
-#     raise ValueError("MongoDB URI not found in environment variables")
-# client = MongoClient(mongodb_uri)
+# Dictionary to store extracted data by labels
+data_dict = {}
 
-# # Select the database
-# db = client.mydatabase  # You can replace 'mydatabase' with your desired database name
+# Get current time in Indian timezone
+indian_timezone = pytz.timezone('Asia/Kolkata')
+now = datetime.now(indian_timezone)
+timestamp = now.strftime('%Y-%m-%d %I:%M %p')  # Format: YYYY-MM-DD HH:MM AM/PM
 
-# # Select the collection
-# collection = db.profits_2  # Collection name as 'profits_2'
+# Iterate through each <li> element
+for li in li_elements:
+    # Extract text from the <li> element
+    li_text = li.get_text(separator="\n", strip=True)
+    
+    # Find the currency label, assuming it's the first line of the <li> text
+    lines = li_text.split('\n')
+    label = lines[0].strip()
+    
+    # Check if the label exists in the dictionary, if not, create a new list
+    if label not in data_dict:
+        data_dict[label] = []
+    
+    # Append the text and timestamp to the list under the label
+    data_dict[label].append({"data": li_text, "timestamp": timestamp})
 
-# # Insert data_list into the collection without removing existing data
-# collection.insert_many(data_list, ordered=False)
+# Connect to MongoDB
+mongodb_uri = os.environ.get('MONGODB_URI')
+if mongodb_uri is None:
+    raise ValueError("MongoDB URI not found in environment variables")
 
-# print("Data extracted and saved to MongoDB collection 'profits_2'")
+try:
+    client = MongoClient(mongodb_uri)
+    db = client.get_default_database()  # Get the default database
+    collection = db.profits_2  # Collection name as 'profits_2'
+
+    # Insert data_dict into the collection without removing existing data
+    collection.insert_many(json.loads(json.dumps(data_dict)), ordered=False)
+    print("Data extracted and saved to MongoDB collection 'profits_2'")
+except Exception as e:
+    print("Error occurred while connecting to MongoDB:", e)
