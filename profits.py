@@ -96,6 +96,7 @@ try:
             'profit': profit_data,
             'updated_timestamp': updated_timestamp  # Add updated timestamp field
         })
+        print(data_list)
 
     # Connect to MongoDB
     client = MongoClient(mongodb_uri)
