@@ -104,7 +104,7 @@ try:
     db = client.mydatabase  # You can replace 'mydatabase' with your desired database name
 
     # Select the collection
-    collection = db.my_collection  # You can replace 'my_collection' with your desired collection name
+    collection = db.profits_3  # Use your desired collection name
 
     # Insert data_list into the collection without removing existing data
     collection.insert_many(data_list)
