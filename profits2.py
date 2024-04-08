@@ -70,7 +70,7 @@ if mongodb_uri is None:
 
 try:
     client = MongoClient(mongodb_uri)
-    db = client.get_default_database()  # Get the default database
+    db = client.mydatabase # Get the default database
     collection = db.profits_2  # Collection name as 'profits_2'
 
     # Insert data_dict into the collection without removing existing data
