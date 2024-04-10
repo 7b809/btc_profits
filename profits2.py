@@ -1,4 +1,4 @@
-import os
+import json
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -7,6 +7,11 @@ from datetime import datetime
 import pytz
 from pymongo import MongoClient
 
+# Connect to MongoDB
+mongodb_uri = os.environ.get('MONGODB_URI')
+
+if mongodb_uri is None:
+    raise ValueError("MongoDB URI not found in environment variables")
 
 # Set the path to chromedriver.exe
 chrome_driver_path = r"chromedriver"
@@ -39,42 +44,37 @@ soup = BeautifulSoup(page_source, 'html.parser')
 # Find all the <li> elements within the specified <ul> with id="myUL"
 li_elements = soup.find('ul', id='myUL').find_all('li')
 
-# Dictionary to store extracted data by labels
-data_dict = {}
-
 # Get current time in Indian timezone
 indian_timezone = pytz.timezone('Asia/Kolkata')
 now = datetime.now(indian_timezone)
 timestamp = now.strftime('%Y-%m-%d %I:%M %p')  # Format: YYYY-MM-DD HH:MM AM/PM
 
+# List to store formatted data strings
+formatted_data = []
+
 # Iterate through each <li> element
 for li in li_elements:
     # Extract text from the <li> element
-    li_text = li.get_text(separator="\n", strip=True)
-    
-    # Find the currency label, assuming it's the first line of the <li> text
-    lines = li_text.split('\n')
-    label = lines[0].strip()
-    
-    # Check if the label exists in the dictionary, if not, create a new list
-    if label not in data_dict:
-        data_dict[label] = []
-    
-    # Append the text and timestamp to the list under the label
-    data_dict[label].append({"data": li_text, "timestamp": timestamp})
-
-# Connect to MongoDB
-mongodb_uri = os.environ.get('MONGODB_URI')
-if mongodb_uri is None:
-    raise ValueError("MongoDB URI not found in environment variables")
+    li_text = li
+    # Format the data string with timestamp
+    formatted_data.append(f"Timestamp: {timestamp}, Data: {li_text}")
 
 try:
+    # Connect to MongoDB
     client = MongoClient(mongodb_uri)
-    db = client.mydatabase # Get the default database
-    collection = db.profits_2  # Collection name as 'profits_2'
 
-    # Insert data_dict into the collection without removing existing data
-    collection.insert_many(json.loads(json.dumps(data_dict)), ordered=False)
-    print("Data extracted and saved to MongoDB collection 'profits_2'")
+    # Select the database
+    db = client.mydatabase  # You can replace 'mydatabase' with your desired database name
+
+    # Select the collection
+    collection = db.profits_2  # Use your desired collection name
+    indian_timezone = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(indian_timezone)
+    timeframe = now.strftime('%Y-%m-%d %I:%M %p') 
+    # Insert formatted data list into MongoDB
+    collection.insert_one({'formatted_data': formatted_data,"timestamp":timeframe})
+
+    print("Data saved to MongoDB.")
+
 except Exception as e:
     print("Error occurred while connecting to MongoDB:", e)
