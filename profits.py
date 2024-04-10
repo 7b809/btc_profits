@@ -6,8 +6,7 @@ import os
 import pytz
 
 # Retrieve MongoDB URI from environment variables
-# mongodb_uri = os.environ.get('MONGODB_URI')
-mongodb_uri = "mongodb+srv://ej818793:dA2Jum3EipkJgVUf@btcprofits.ss1iqtf.mongodb.net/?retryWrites=true&w=majority"
+mongodb_uri = os.environ.get('MONGODB_URI')
 
 # Check if the URI is provided
 if mongodb_uri is None:
