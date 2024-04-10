@@ -1,4 +1,4 @@
-name: Run Profits_1 Script
+name: Run Profits_2 Script
 
 on:
   schedule:
