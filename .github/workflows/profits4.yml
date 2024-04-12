@@ -1,4 +1,4 @@
-name: Run Profits_2 Script
+name: Run Profits_3 Script
 
 on:
   schedule:
@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 pymongo pytz re
         
-      - name: Run profits.py script and save output
+      - name: Run profits3.py script 
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: |
