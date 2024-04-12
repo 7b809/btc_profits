@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install selenium beautifulsoup4 pymongo pytz
         
-      - name: Run profits.py script and save output
+      - name: Run profits2.py script
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: |
