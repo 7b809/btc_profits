@@ -2,7 +2,7 @@ name: Run Profits_4 Script
 
 on:
   schedule:
-    - cron: '0 */4 * * *'  # Runs every 4 hours
+    - cron: '0 * * * *'  # Runs every 4 hours
 
 jobs:
   run_profits_script_and_save_output:
