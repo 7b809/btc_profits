@@ -82,7 +82,7 @@ try:
         date_ = now.strftime('%Y-%m-%d')
         hour_ = now.strftime('%I')  # 12-hour format
         am_pm = now.strftime('%p')  # AM/PM indicator
-        updated_timestamp = now.strftime('%A, %b %d, %I %p')  # Updated timestamp format
+        updated_timestamp = now.strftime('%A, %b %d, %Y, %I %p')  # Updated timestamp format
 
         # Append extracted data to list
         data_list.append({
