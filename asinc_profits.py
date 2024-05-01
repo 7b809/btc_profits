@@ -56,7 +56,7 @@ data = []
 
 # Get current time in Indian timezone
 now = datetime.now(indian_timezone)
-updated_timestamp = now.strftime('%A, %b %d, %I %p')  # Updated timestamp format
+updated_timestamp = now.strftime('%A, %b %d, %Y, %I %p')  # Updated timestamp format
 
 # Iterate over each row in the table
 for row in table.find_all('tr'):
