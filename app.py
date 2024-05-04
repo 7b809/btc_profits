@@ -3,15 +3,14 @@ from pymongo import MongoClient
 import os
 from io import BytesIO
 
-
 app = Flask(__name__)
+
 @app.route('/')
 def index():
     return 'Welcome to your Flask application!'
 
 
 @app.route('/get_pdf', methods=['GET'])
-
 def get_pdf():
     filename = request.args.get('filename')
     if not filename:
@@ -35,6 +34,17 @@ def get_pdf():
         # Convert the PDF data from bytes to a file-like object
         pdf_stream = BytesIO(pdf_data)
         
-        return send_file(pdf_stream, as_attachment=True, attachment_filename=f'{filename}.pdf')
+        # Return response with a message and the PDF file
+        return f"""
+            <html>
+            <head>
+                <title>PDF Download</title>
+            </head>
+            <body>
+                <h1>Downloading PDF</h1>
+                <p>Please wait while your PDF (<strong>{filename}</strong>) is being downloaded...</p>
+            </body>
+            </html>
+        """, 200, {'Content-Type': 'application/pdf'}
     else:
         return 'Error: PDF document not found', 404
