@@ -118,7 +118,7 @@ except ValueError:
 sorted_combined_data = {k: v for k, v in sorted(combined_data.items(), key=lambda item: max(item[1], key=lambda x: x['profit'])['profit'], reverse=True)}
 
 # Create a PDF object to save plots
-with PdfPages("testing_one.pdf") as pdf:
+with PdfPages("pool_one.pdf") as pdf:
     # Iterate over each sheet in sorted_combined_data
     for idx, (sheet_name, sheet_data) in enumerate(sorted_combined_data.items(), start=1):
         # Create a new figure for each sheet
@@ -172,7 +172,7 @@ with PdfPages("testing_one.pdf") as pdf:
     print("Plots for all sheets sorted by profits merged into PDF.")
 
 # Save the PDF to MongoDB collection
-pdf_filename = "testing_one.pdf"
+pdf_filename = "pool_one.pdf"
 collection = db.pdf_data
 
 # Check if a document with the same filename exists
