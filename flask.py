@@ -3,14 +3,18 @@ from pymongo import MongoClient
 import os
 
 app = Flask(__name__)
+
 @app.route('/get_pdf', methods=['GET'])
 def get_pdf():
     filename = request.args.get('filename')
     if not filename:
         return 'Error: Missing filename parameter', 400
     
+    # Read MongoDB URI from file
+    with open('data.txt', 'r') as file:
+        mongodb_uri = file.read().strip()
+    
     # Connect to MongoDB Atlas
-    mongodb_uri = os.environ.get('MONGODB_URI')
     client = MongoClient(mongodb_uri)
     db = client.mydatabase  # Replace 'mydatabase' with your database name
     collection = db.pdf_data
