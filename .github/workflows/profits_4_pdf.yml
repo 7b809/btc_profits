@@ -1,4 +1,4 @@
-name: Run get_data_2 Script
+name: Run get_data_4 Script
 
 on:
   schedule:
