@@ -2,7 +2,11 @@ name: Run get_data_1 Script
 
 on:
   schedule:
-    - cron: '0 0 */5 * *'  # Runs every 5 days at midnight
+  
+    - cron: '0 * * * *'  # Runs every 5 days at midnight
+    # - cron: '0 0 */5 * *'  # Runs every 5 days at midnight
+
+
 
 jobs:
   run_profits_script_and_save_output:
