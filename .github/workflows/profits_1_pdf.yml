@@ -1,4 +1,4 @@
-name: Run get_data_1 Script
+name: Run get_data_2 Script
 
 on:
   schedule:
@@ -30,4 +30,4 @@ jobs:
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: |
-          python get_pdf.py  # Make sure to replace with the correct filename
+          python get_pdf_1.py  # Make sure to replace with the correct filename
