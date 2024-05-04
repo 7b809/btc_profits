@@ -3,6 +3,10 @@ from pymongo import MongoClient
 import os
 
 app = Flask(__name__)
+@app.route('/')
+def index():
+    return 'Welcome to your Flask application!'
+
 
 @app.route('/get_pdf', methods=['GET'])
 def get_pdf():
