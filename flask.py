@@ -5,7 +5,8 @@ import os
 app = Flask(__name__)
 
 # Connect to MongoDB Atlas
-mongodb_uri = 'mongodb+srv://ej818793:dA2Jum3EipkJgVUf@btcprofits.ss1iqtf.mongodb.net/?retryWrites=true&w=majority'
+
+mongodb_uri = os.environ.get('MONGODB_URI')
 client = MongoClient(mongodb_uri)
 db = client.mydatabase  # Replace 'mydatabase' with your database name
 collection = db.pdf_data
