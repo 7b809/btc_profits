@@ -1,34 +1,18 @@
-from flask import Flask, send_file
+from flask import Flask, render_template, send_file
 from pymongo import MongoClient
 import os
 
 app = Flask(__name__)
 
 # Connect to MongoDB Atlas
-
-mongodb_uri = os.environ.get('MONGODB_URI')
+mongodb_uri = 'mongodb+srv://ej818793:dA2Jum3EipkJgVUf@btcprofits.ss1iqtf.mongodb.net/?retryWrites=true&w=majority'
 client = MongoClient(mongodb_uri)
 db = client.mydatabase  # Replace 'mydatabase' with your database name
 collection = db.pdf_data
 
 @app.route('/')
 def index():
-    return """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Download PDF</title>
-    </head>
-    <body>
-        <h1>Download PDF</h1>
-        <form action="/download-pdf" method="get">
-            <button type="submit">Download PDF</button>
-        </form>
-    </body>
-    </html>
-    """
+    return render_template('index.html')
 
 @app.route('/download-pdf')
 def download_pdf():
