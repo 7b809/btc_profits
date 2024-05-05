@@ -1,12 +1,13 @@
-import requests
 from bs4 import BeautifulSoup
 import re
 from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 import pytz
 from pymongo import MongoClient
 import os
 
-# Connect to MongoDB
 # Connect to MongoDB
 mongodb_uri = os.environ.get('MONGODB_URI')
 
@@ -16,15 +17,32 @@ indian_timezone = pytz.timezone('Asia/Kolkata')
 now = datetime.now(indian_timezone)
 timestamp = now.strftime('%Y-%m-%d %I:%M %p')  # Format: YYYY-MM-DD HH:MM AM/PM
 
-#
+chrome_driver_path = r"chromedriver"
+
+# Set up Chrome options
+chrome_options = ChromeOptions()
+chrome_options.add_argument('--headless')  # Run Chrome in headless mode (no GUI)
+
+# Set up Chrome service
+chrome_service = ChromeService(executable_path=chrome_driver_path)
+
+# Create a new instance of the Chrome webdriver
+browser = webdriver.Chrome(service=chrome_service, options=chrome_options)
+
 # URL of the webpage to scrape
 url = "https://minetheasic.com/"
 
-# Send a GET request to the URL
-response = requests.get(url)
+# Open the URL in the browser
+browser.get(url)
+
+# Get the page source
+page_source = browser.page_source
+
+# Close the browser
+browser.quit()
 
 # Parse the HTML content
-soup = BeautifulSoup(response.content, "html.parser")
+soup = BeautifulSoup(page_source, "html.parser")
 
 # Find all <div> elements with class="thread"
 threads = soup.find_all("div", class_="thread")
