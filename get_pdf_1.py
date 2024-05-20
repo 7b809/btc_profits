@@ -108,11 +108,8 @@ def categorize_hour(hour):
     else:
         return '18:00 - 23:59'
 
-# Define color map
-try:
-    cmap = cm.get_cmap('tab10', 4)
-except ValueError:
-    cmap = cm.tab10
+cmap = cm.get_cmap('tab10')
+
 
 # Sort the combined data by profit in descending order
 sorted_combined_data = {k: v for k, v in sorted(combined_data.items(), key=lambda item: max(item[1], key=lambda x: x['profit'])['profit'], reverse=True)}
