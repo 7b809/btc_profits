@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from pymongo import MongoClient
 import json
@@ -108,8 +107,7 @@ def categorize_hour(hour):
     else:
         return '18:00 - 23:59'
 
-cmap = cm.get_cmap('tab10')
-
+cmap = plt.get_cmap('tab10')
 
 # Sort the combined data by profit in descending order
 sorted_combined_data = {k: v for k, v in sorted(combined_data.items(), key=lambda item: max(item[1], key=lambda x: x['profit'])['profit'], reverse=True)}
@@ -176,7 +174,7 @@ collection = db.pdf_data
 existing_pdf = collection.find_one({"filename": pdf_filename})
 
 # If a document with the same filename exists, delete it
-if existing_pdf:
+if (existing_pdf):
     print(f"A PDF with the filename '{pdf_filename}' already exists. Deleting existing document...")
     collection.delete_one({"_id": existing_pdf["_id"]})
 
