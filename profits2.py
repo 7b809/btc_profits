@@ -1,21 +1,18 @@
+from bs4 import BeautifulSoup
 import json
+from datetime import datetime
+import pytz
 import os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from bs4 import BeautifulSoup
-from datetime import datetime
-import pytz
 from pymongo import MongoClient
-
-# Connect to MongoDB
-mongodb_uri = os.environ.get('MONGODB_URI')
-
-if mongodb_uri is None:
-    raise ValueError("MongoDB URI not found in environment variables")
 
 # Set the path to chromedriver.exe
 chrome_driver_path = r"chromedriver"
+
+
+
 
 # Set up Chrome options
 chrome_options = ChromeOptions()
@@ -50,17 +47,59 @@ indian_timezone = pytz.timezone('Asia/Kolkata')
 now = datetime.now(indian_timezone)
 timestamp = now.strftime('%Y-%m-%d %I:%M %p')  # Format: YYYY-MM-DD HH:MM AM/PM
 
-# List to store formatted data strings
+# List to store formatted data
 formatted_data = []
 
 # Iterate through each <li> element
 for li in li_elements:
-    # Extract text from the <li> element
-    li_text = li
-    # Format the data string with timestamp
-    formatted_data.append(f"Timestamp: {timestamp}, Data: {li_text}")
+    try:
+        # Extracting machine name
+        machine_name = li.find('div', class_='deviceHeader2').text.strip()
+
+        # Extracting original profits, calculated profits, calculated revenue, and currency for highest profit
+        highest_profit_table = li.find_all('table')[0]
+        highest_profit_data = highest_profit_table.find_all('td')
+        highest_profit_original_profits = highest_profit_data[1].text.strip()
+        highest_profit_calculated_profits = highest_profit_data[2].text.strip()
+        highest_profit_calculated_revenue = str(
+            float(highest_profit_original_profits[1:].replace(',', '')) - float(
+                highest_profit_calculated_profits[1:].replace(',', '')))
+        highest_profit_currency = highest_profit_data[0].text.strip()
+
+        # Extracting original profits, calculated profits, calculated revenue, and currency for profit 24h
+        profit_24h_table = li.find_all('table')[3]
+        profit_24h_data = profit_24h_table.find_all('td')
+        profit_24h_original_profits = profit_24h_data[1].text.strip()
+        profit_24h_calculated_profits = profit_24h_data[2].text.strip()
+        profit_24h_calculated_revenue = str(
+            float(profit_24h_original_profits[1:].replace(',', '')) - float(
+                profit_24h_calculated_profits[1:].replace(',', '')))
+        profit_24h_currency = profit_24h_data[0].text.strip()
+
+        # Constructing the final dictionary
+        data = {
+            "timestamp": timestamp,
+            "machine_name": machine_name,
+            "highest_profit": {
+                "original_profits": highest_profit_original_profits,
+                "calculated_profits": highest_profit_calculated_profits,
+                "calculated_revenue": f"${highest_profit_calculated_revenue}",
+                "currency": highest_profit_currency
+            },
+            "profit_24h": {
+                "original_profits_24h": profit_24h_original_profits,
+                "calculated_profits_24h": profit_24h_calculated_profits,
+                "calculated_revenue_24h": f"${profit_24h_calculated_revenue}",
+                "currency": profit_24h_currency
+            }
+        }
+        formatted_data.append(data)
+    except AttributeError:
+        print("Error: 'deviceHeader2' element not found. Skipping this entry.")
 
 try:
+    mongodb_uri = os.environ.get('MONGODB_URI')
+
     # Connect to MongoDB
     client = MongoClient(mongodb_uri)
 
