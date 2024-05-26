@@ -1,118 +1,137 @@
 from bs4 import BeautifulSoup
-import requests
 from pymongo import MongoClient
 from datetime import datetime
 import os
 import pytz
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 
-# Retrieve MongoDB URI from environment variables
-mongodb_uri = os.environ.get('MONGODB_URI')
+def scrape_and_save_to_mongodb():
+    try:
+        # Retrieve MongoDB URI from environment variables
+        mongodb_uri = os.environ.get('MONGODB_URI')
 
-# Check if the URI is provided
-if mongodb_uri is None:
-    raise ValueError("MongoDB URI not found in environment variables")
+        # Check if the URI is provided
+        if mongodb_uri is None:
+            raise ValueError("MongoDB URI not found in environment variables")
 
-# Set Indian timezone
-indian_timezone = pytz.timezone('Asia/Kolkata')
+        # Set Indian timezone
+        indian_timezone = pytz.timezone('Asia/Kolkata')
 
-url = "https://minerstat.com/hardware/asics"
+        url = "https://minerstat.com/hardware/asics"
 
-try:
-    response = requests.get(url)
-    response.raise_for_status()  # Raise exception for non-200 status codes
-    html_content = response.text
+        # Set the path to chromedriver.exe
+        chrome_driver_path = r"chromedriver"
 
-    # Parse HTML content
-    soup = BeautifulSoup(html_content, 'html.parser')
+        # Set up Chrome options
+        chrome_options = ChromeOptions()
+        chrome_options.add_argument('--headless')  # Run Chrome in headless mode (no GUI)
 
-    # Initialize list to store extracted data
-    data_list = []
+        # Set up Chrome service
+        chrome_service = ChromeService(executable_path=chrome_driver_path)
 
-    for div_tr in soup.find_all('div', class_='tr'):
-        # Extracting data from div with class = tr
-        order_element = div_tr.find('div', class_='flexOrder')
-        if order_element:
-            order = order_element.text.strip()
-        else:
-            continue  # Skip this entry if order number not found
+        # Create a new instance of the Chrome webdriver
+        browser = webdriver.Chrome(service=chrome_service, options=chrome_options)
+        # Open the URL in the browser
+        browser.get(url)
 
-        title_element = div_tr.find('div', class_='flexHardware').find('a', title=True)
-        if title_element:
-            title = title_element.get('title')
-        else:
-            continue  # Skip this entry if title not found
+        # Get the page source
+        page_source = browser.page_source
 
-        hashrate_element = div_tr.find('div', class_='flexHashrate')
-        if hashrate_element:
-            hashrate = hashrate_element.text.strip()
-        else:
-            continue  # Skip this entry if hashrate not found
+        # Close the browser
+        browser.quit()
 
-        power_element = div_tr.find('div', class_='flexPower')
-        if power_element:
-            power = power_element.text.strip()
-        else:
-            continue  # Skip this entry if power not found
+        # Parse the HTML content
+        soup = BeautifulSoup(page_source, 'html.parser')
 
-        profit_data = {}
-        for div_coin in div_tr.find_all('div', class_='coin'):
-            coin_title_element = div_coin.find('a', title=True)
-            if coin_title_element:
-                coin_title = coin_title_element.get('title')
+        # Initialize list to store extracted data
+        data_list = []
+
+        for div_tr in soup.find_all('div', class_='tr'):
+            # Extracting data from div with class = tr
+            order_element = div_tr.find('div', class_='flexOrder')
+            if order_element:
+                order = order_element.text.strip()
             else:
-                continue  # Skip this entry if coin title not found
+                continue  # Skip this entry if order number not found
 
-            coin_profit_element = div_coin.find('div', class_='text').find('b')
-            if coin_profit_element:
-                coin_profit = coin_profit_element.text
-                # Calculate monthly profit from daily profit
-                usd_profit = float(coin_profit.split()[0])  # Assuming the profit is in USD
-                monthly_profit_usd = usd_profit * 30  # Assuming 30 days in a month
-                monthly_profit_usd_str = "{:.2f} USD".format(monthly_profit_usd)
+            title_element = div_tr.find('div', class_='flexHardware').find('a', title=True)
+            if title_element:
+                title = title_element.get('title')
             else:
-                continue  # Skip this entry if coin profit not found
+                continue  # Skip this entry if title not found
 
-            profit_data[coin_title] = {
-                'daily_profit': coin_profit,
-                'monthly_profit_usd': monthly_profit_usd_str
-            }
+            hashrate_element = div_tr.find('div', class_='flexHashrate')
+            if hashrate_element:
+                hashrate = hashrate_element.text.strip()
+            else:
+                continue  # Skip this entry if hashrate not found
 
-        # Get current time in Indian timezone
-        now = datetime.now(indian_timezone)
-        date_ = now.strftime('%Y-%m-%d')
-        hour_ = now.strftime('%I')  # 12-hour format
-        am_pm = now.strftime('%p')  # AM/PM indicator
-        updated_timestamp = now.strftime('%A, %b %d, %Y, %I %p')  # Updated timestamp format
+            power_element = div_tr.find('div', class_='flexPower')
+            if power_element:
+                power = power_element.text.strip()
+            else:
+                continue  # Skip this entry if power not found
 
-        # Append extracted data to list
-        data_list.append({
-            'date': date_,
-            'hour': f"{hour_} {am_pm}",
-            'order': order,
-            'title': title,
-            'hashrate': hashrate,
-            'power': power,
-            'profit': profit_data,
-            'updated_timestamp': updated_timestamp  # Add updated timestamp field
-        })
-        print(data_list)
+            profit_data = {}
+            for div_coin in div_tr.find_all('div', class_='coin'):
+                coin_title_element = div_coin.find('a', title=True)
+                if coin_title_element:
+                    coin_title = coin_title_element.get('title')
+                else:
+                    continue  # Skip this entry if coin title not found
 
-    # Connect to MongoDB
-    client = MongoClient(mongodb_uri)
+                coin_profit_element = div_coin.find('div', class_='text').find('b')
+                if coin_profit_element:
+                    coin_profit = coin_profit_element.text
+                    # Calculate monthly profit from daily profit
+                    usd_profit = float(coin_profit.split()[0])  # Assuming the profit is in USD
+                    monthly_profit_usd = usd_profit * 30  # Assuming 30 days in a month
+                    monthly_profit_usd_str = "{:.2f} USD".format(monthly_profit_usd)
+                else:
+                    continue  # Skip this entry if coin profit not found
 
-    # Select the database
-    db = client.mydatabase  # You can replace 'mydatabase' with your desired database name
+                profit_data[coin_title] = {
+                    'daily_profit': coin_profit,
+                    'monthly_profit_usd': monthly_profit_usd_str
+                }
 
-    # Select the collection
-    collection = db.profits_3  # Use your desired collection name
+            # Get current time in Indian timezone
+            now = datetime.now(indian_timezone)
+            date_ = now.strftime('%Y-%m-%d')
+            hour_ = now.strftime('%I')  # 12-hour format
+            am_pm = now.strftime('%p')  # AM/PM indicator
+            updated_timestamp = now.strftime('%A, %b %d, %Y, %I %p')  # Updated timestamp format
 
-    # Insert data_list into the collection without removing existing data
-    collection.insert_many(data_list)
+            # Append extracted data to list
+            data_list.append({
+                'date': date_,
+                'hour': f"{hour_} {am_pm}",
+                'order': order,
+                'title': title,
+                'hashrate': hashrate,
+                'power': power,
+                'profit': profit_data,
+                'updated_timestamp': updated_timestamp  # Add updated timestamp field
+            })
 
-    print("Data saved to MongoDB.")
+        # Connect to MongoDB
+        client = MongoClient(mongodb_uri)
 
-except requests.RequestException as e:
-    print(f"Failed to retrieve data: {e}")
+        # Select the database
+        db = client.mydatabase  # You can replace 'mydatabase' with your desired database name
 
-except Exception as e:
-    print(f"An error occurred: {e}")
+        # Select the collection
+        collection = db.profits_3  # Use your desired collection name
+
+        # Insert data_list into the collection without removing existing data
+        collection.insert_many(data_list)
+
+        print("Data saved to MongoDB.")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+# Call the function to scrape and save to MongoDB
+scrape_and_save_to_mongodb()
