@@ -3,6 +3,7 @@ from pymongo import MongoClient
 import os
 from io import BytesIO
 from gridfs import GridFS
+import zipfile
 
 app = Flask(__name__)
 
