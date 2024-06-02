@@ -13,7 +13,7 @@ def index():
 @app.route('/zip_files')
 def zip_files():
     # Read MongoDB URI from file
-    with open('data1.txt', 'r') as file:
+    with open('data2.txt', 'r') as file:
         mongodb_uri = file.read().strip()
     
     # Connect to MongoDB Atlas
@@ -37,7 +37,7 @@ def get_zip():
         return 'Error: Missing filename parameter', 400
     
     # Read MongoDB URI from file
-    with open('data1.txt', 'r') as file:
+    with open('data2.txt', 'r') as file:
         mongodb_uri = file.read().strip()
     
     # Connect to MongoDB Atlas
