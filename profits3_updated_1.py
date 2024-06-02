@@ -113,11 +113,15 @@ try:
 
     # Select the collection
     collection = db.profits_4  # Use your desired collection name
-    
-    # Insert formatted data list into MongoDB
-    collection.insert_one({'Data': data})
+    if data:
+        
+        # Insert formatted data list into MongoDB
+        collection.insert_one({'Data': data})
+        print("Data saved to MongoDB.")
 
-    print("Data saved to MongoDB.")
+    else:
+        print("Data empty, not saved to MongoDB.")
+
 
 except Exception as e:
     print("Error occurred while connecting to MongoDB:", e)
