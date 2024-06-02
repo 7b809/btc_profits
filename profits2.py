@@ -112,9 +112,12 @@ try:
     now = datetime.now(indian_timezone)
     timeframe = now.strftime('%Y-%m-%d %I:%M %p') 
     # Insert formatted data list into MongoDB
-    collection.insert_one({'formatted_data': formatted_data,"timestamp":timeframe})
-
-    print("Data saved to MongoDB.")
+    if formatted_data:
+        collection.insert_one({'formatted_data': formatted_data,"timestamp":timeframe})
+    
+        print("Data saved to MongoDB.")
+    else:
+        print("Data empty, do not saved to mongodb")
 
 except Exception as e:
     print("Error occurred while connecting to MongoDB:", e)
