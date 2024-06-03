@@ -1,68 +1,37 @@
-from flask import Flask, request, send_file
+from flask import Flask, send_file
 from pymongo import MongoClient
 import os
-from io import BytesIO
-from gridfs import GridFS
 import zipfile
+import shutil
+from gridfs import GridFS
 
 app = Flask(__name__)
+
+# Function to fetch and save a zip file from MongoDB GridFS
+def fetch_and_save_zip(collection_name, filename, db):
+    try:
+        grid_fs = GridFS(db, collection_name)
+        grid_out = grid_fs.find_one({})
+        if grid_out:
+            with open(filename, 'wb') as f:
+                f.write(grid_out.read())
+            print(f"Saved {filename} locally.")
+        else:
+            print(f"No file found in collection {collection_name}.")
+    except Exception as e:
+        print(f"Error fetching file from collection {collection_name}: {e}")
+
+# Function to create the final zip file containing all fetched zip files
+def create_final_zip(final_zip_path, final_zip_dir):
+    with zipfile.ZipFile(final_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(final_zip_dir):
+            for file in files:
+                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), final_zip_dir))
+    print(f"All files have been zipped into {final_zip_path}.")
 
 @app.route('/')
 def index():
     return 'Welcome to your Flask application!'
-
-@app.route('/zip_files')
-def zip_files():
-    # Read MongoDB URI from file
-    with open('data2.txt', 'r') as file:
-        mongodb_uri = file.read().strip()
-    
-    # Connect to MongoDB Atlas
-    client = MongoClient(mongodb_uri)
-    db = client.zip_files  # The database name is 'zip_files'
-
-    # Get all collection names in the database
-    collection_names = db.list_collection_names()
-    
-    # Generate HTML to display links for each zip file
-    html = "<h1>Available Zip Files</h1>"
-    for collection_name in collection_names:
-        html += f'<p><a href="/get_zip?filename={collection_name}">{collection_name}</a></p>'
-    
-    return html
-
-@app.route('/get_zip', methods=['GET'])
-def get_zip():
-    filename = request.args.get('filename')
-    if not filename:
-        return 'Error: Missing filename parameter', 400
-    
-    # Read MongoDB URI from file
-    with open('data2.txt', 'r') as file:
-        mongodb_uri = file.read().strip()
-    
-    # Connect to MongoDB Atlas
-    client = MongoClient(mongodb_uri)
-    db = client.zip_files  # The database name is 'zip_files'
-    fs = GridFS(db, collection=filename)  # The collection name is the filename
-    
-    # Find the zip file in the specified collection
-    zip_file = fs.find_one({"filename": filename})
-    if zip_file:
-        zip_data = zip_file.read()
-        
-        # Convert the zip data from bytes to a file-like object
-        zip_stream = BytesIO(zip_data)
-        
-        # Return the zip file as an attachment
-        return send_file(
-            zip_stream,
-            as_attachment=True,
-            download_name=f"{filename}.zip",
-            mimetype='application/zip'
-        )
-    else:
-        return 'Error: Zip file not found', 404
 
 @app.route('/download_all_zips', methods=['GET'])
 def download_all_zips():
@@ -70,33 +39,32 @@ def download_all_zips():
     with open('data2.txt', 'r') as file:
         mongodb_uri = file.read().strip()
     
-    # Connect to MongoDB Atlas
+    # Connect to MongoDB using URI from file
     client = MongoClient(mongodb_uri)
-    db = client.zip_files  # The database name is 'zip_files'
+    db = client.zip_files
 
-    # Create a BytesIO stream to store all zips
-    all_zips_stream = BytesIO()
+    # Directory to save individual zip files
+    final_zip_dir = "final_zip"
+    if not os.path.exists(final_zip_dir):
+        os.makedirs(final_zip_dir)
 
-    with zipfile.ZipFile(all_zips_stream, 'w', zipfile.ZIP_DEFLATED) as all_zips:
-        # Get all collection names in the database
-        collection_names = db.list_collection_names()
+    # Fetch and save each zip file
+    fetch_and_save_zip("json_files", os.path.join(final_zip_dir, 'json_files.zip'), db)
+    fetch_and_save_zip("excel_files", os.path.join(final_zip_dir, 'excel_files.zip'), db)
+    fetch_and_save_zip("img_files", os.path.join(final_zip_dir, 'img_files.zip'), db)
 
-        for collection_name in collection_names:
-            fs = GridFS(db, collection=collection_name)
-            zip_file = fs.find_one({"filename": collection_name})
-            if zip_file:
-                zip_data = zip_file.read()
-                # Write the zip data to the zip file in the stream
-                all_zips.writestr(f"{collection_name}.zip", zip_data)
-    
-    # Seek to the start of the BytesIO stream
-    all_zips_stream.seek(0)
-    
+    # Create the final zip file containing all the fetched zip files
+    final_zip_path = 'all_files.zip'
+    create_final_zip(final_zip_path, final_zip_dir)
+
+    # Clean up temporary directory
+    shutil.rmtree(final_zip_dir)
+
     # Return the combined zip file as an attachment
     return send_file(
-        all_zips_stream,
+        final_zip_path,
         as_attachment=True,
-        download_name='all_zips.zip',
+        download_name='all_files.zip',
         mimetype='application/zip'
     )
 
