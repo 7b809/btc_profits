@@ -29,6 +29,10 @@ def create_final_zip(final_zip_path, final_zip_dir):
                 zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), final_zip_dir))
     print(f"All files have been zipped into {final_zip_path}.")
 
+# Function to fetch and save JSON zip file from MongoDB
+def fetch_and_save_json_zip(db, final_zip_dir):
+    fetch_and_save_zip("json_files", os.path.join(final_zip_dir, 'json_files.zip'), db)
+
 @app.route('/')
 def index():
     return 'Welcome to your Flask application!'
@@ -49,9 +53,9 @@ def download_all_zips():
         os.makedirs(final_zip_dir)
 
     # Fetch and save each zip file
-    fetch_and_save_zip("json_files", os.path.join(final_zip_dir, 'json_files.zip'), db)
-    fetch_and_save_zip("excel_files", os.path.join(final_zip_dir, 'excel_files.zip'), db)
-    fetch_and_save_zip("img_files", os.path.join(final_zip_dir, 'img_files.zip'), db)
+    fetch_and_save_json_zip(db, final_zip_dir)  # Fetch JSON zip
+    fetch_and_save_zip("excel_files", os.path.join(final_zip_dir, 'excel_files.zip'), db)  # Fetch Excel zip
+    fetch_and_save_zip("img_files", os.path.join(final_zip_dir, 'img_files.zip'), db)  # Fetch Image zip
 
     # Create the final zip file containing all the fetched zip files
     final_zip_path = 'all_files.zip'
