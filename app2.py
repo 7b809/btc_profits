@@ -3,8 +3,12 @@ import os
 import pymongo
 import zipfile
 import shutil
+import time
 
 app = Flask(__name__)
+
+# Global variable to indicate if the file creation is complete
+file_ready = False
 
 # Function to connect to MongoDB and download zip files
 def download_zip_files(target_mongo_url, target_db_name, collections_names):
@@ -100,6 +104,8 @@ def index():
 # Route to fetch and return common files as a zip
 @app.route('/get_cfiles_zip', methods=['GET'])
 def get_cfiles_zip():
+    global file_ready
+
     # Read MongoDB URI from file
     with open('data2.txt', 'r') as file:
         mongodb_uri = file.read().strip()
@@ -122,6 +128,9 @@ def get_cfiles_zip():
 
     # Clean up the common files directory
     shutil.rmtree(output_base_folder)
+
+    # Set the file ready flag to True
+    file_ready = True
 
     # Return the combined zip file as an attachment
     return send_file(
