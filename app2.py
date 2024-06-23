@@ -1,74 +1,133 @@
 from flask import Flask, send_file
-from pymongo import MongoClient
 import os
+import pymongo
 import zipfile
 import shutil
-from gridfs import GridFS
 
 app = Flask(__name__)
 
-# Function to fetch and save a zip file from MongoDB GridFS
-def fetch_and_save_zip(collection_name, filename, db):
-    try:
-        grid_fs = GridFS(db, collection_name)
-        grid_out = grid_fs.find_one({})
-        if grid_out:
-            with open(filename, 'wb') as f:
-                f.write(grid_out.read())
-            print(f"Saved {filename} locally.")
-        else:
-            print(f"No file found in collection {collection_name}.")
-    except Exception as e:
-        print(f"Error fetching file from collection {collection_name}: {e}")
+# Function to connect to MongoDB and download zip files
+def download_zip_files(target_mongo_url, target_db_name, collections_names):
+    # Connect to the MongoDB client
+    client = pymongo.MongoClient(target_mongo_url)
+    db = client[target_db_name]
 
-# Function to create the final zip file containing all fetched zip files
-def create_final_zip(final_zip_path, final_zip_dir):
-    with zipfile.ZipFile(final_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(final_zip_dir):
-            for file in files:
-                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), final_zip_dir))
-    print(f"All files have been zipped into {final_zip_path}.")
+    for target_collection_name in collections_names:
+        collection = db[target_collection_name]
+        print(f"Connected to MongoDB collection '{target_collection_name}' in database '{target_db_name}'.")
 
-# Function to fetch and save JSON zip file from MongoDB
-def fetch_and_save_json_zip(db, final_zip_dir):
-    fetch_and_save_zip("json_files", os.path.join(final_zip_dir, 'json_files.zip'), db)
+        # Directory to save the downloaded zip files
+        download_folder = f"{target_collection_name}_zip"
+        if not os.path.exists(download_folder):
+            os.makedirs(download_folder)
 
+        # Fetch all documents in the collection
+        documents = list(collection.find())
+        total_documents = len(documents)
+        print(f"Total documents found: {total_documents}")
+
+        # Download each zip file
+        for idx, doc in enumerate(documents):
+            filename = doc["filename"]
+            filedata = doc["filedata"]
+
+            # Save the file locally
+            output_path = os.path.join(download_folder, filename)
+            with open(output_path, "wb") as file:
+                file.write(filedata)
+
+            print(f"Downloaded '{filename}' ({idx + 1}/{total_documents}).")
+
+    # Close the MongoDB connection
+    client.close()
+    print("MongoDB connection closed.")
+
+# Function to extract zip files and find common files
+def process_zip_files(collections_names):
+    file_dict = {}
+
+    for target_collection_name in collections_names:
+        download_folder = f"{target_collection_name}_zip"
+        extracted_folder = f"{target_collection_name}_extracted"
+        if not os.path.exists(extracted_folder):
+            os.makedirs(extracted_folder)
+
+        for zip_file in os.listdir(download_folder):
+            zip_file_path = os.path.join(download_folder, zip_file)
+            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                zip_ref.extractall(extracted_folder)
+
+            for extracted_file in os.listdir(extracted_folder):
+                file_name, file_extension = os.path.splitext(extracted_file)
+                if file_name not in file_dict:
+                    file_dict[file_name] = {}
+                file_dict[file_name][target_collection_name] = os.path.join(extracted_folder, extracted_file)
+
+    # Create folders for common files and move them
+    output_base_folder = "common_files"
+    if not os.path.exists(output_base_folder):
+        os.makedirs(output_base_folder)
+
+    for file_name, file_paths in file_dict.items():
+        if len(file_paths) == len(collections_names):
+            common_folder = os.path.join(output_base_folder, f"{file_name}_files")
+            if not os.path.exists(common_folder):
+                os.makedirs(common_folder)
+
+            for collection_name, file_path in file_paths.items():
+                os.rename(file_path, os.path.join(common_folder, os.path.basename(file_path)))
+
+    # Remove all extracted files and folders
+    for target_collection_name in collections_names:
+        extracted_folder = f"{target_collection_name}_extracted"
+        if os.path.exists(extracted_folder):
+            shutil.rmtree(extracted_folder)
+
+    # Remove original zip folders
+    for target_collection_name in collections_names:
+        download_folder = f"{target_collection_name}_zip"
+        if os.path.exists(download_folder):
+            shutil.rmtree(download_folder)
+
+    print("All extracted files, folders, and original zip folders have been removed.")
+    return output_base_folder
+
+# Route to display a welcoming message
 @app.route('/')
 def index():
     return 'Welcome to your Flask application!'
 
-@app.route('/download_all_zips', methods=['GET'])
-def download_all_zips():
+# Route to fetch and return common files as a zip
+@app.route('/get_cfiles_zip', methods=['GET'])
+def get_cfiles_zip():
     # Read MongoDB URI from file
     with open('data2.txt', 'r') as file:
         mongodb_uri = file.read().strip()
     
-    # Connect to MongoDB using URI from file
-    client = MongoClient(mongodb_uri)
-    db = client.zip_files
+    # Download zip files from MongoDB
+    target_db_name = "zip_files"
+    collections_names = ["json_files", "excel_files", "img_files"]
+    download_zip_files(mongodb_uri, target_db_name, collections_names)
 
-    # Directory to save individual zip files
-    final_zip_dir = "final_zip"
-    if not os.path.exists(final_zip_dir):
-        os.makedirs(final_zip_dir)
+    # Process zip files and find common files
+    output_base_folder = process_zip_files(collections_names)
 
-    # Fetch and save each zip file
-    fetch_and_save_json_zip(db, final_zip_dir)  # Fetch JSON zip
-    fetch_and_save_zip("excel_files", os.path.join(final_zip_dir, 'excel_files.zip'), db)  # Fetch Excel zip
-    fetch_and_save_zip("img_files", os.path.join(final_zip_dir, 'img_files.zip'), db)  # Fetch Image zip
+    # Create the final zip file containing all the common files
+    final_zip_path = 'common_files.zip'
+    with zipfile.ZipFile(final_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(output_base_folder):
+            for file in files:
+                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), output_base_folder))
+    print(f"All common files have been zipped into {final_zip_path}.")
 
-    # Create the final zip file containing all the fetched zip files
-    final_zip_path = 'all_files.zip'
-    create_final_zip(final_zip_path, final_zip_dir)
-
-    # Clean up temporary directory
-    shutil.rmtree(final_zip_dir)
+    # Clean up the common files directory
+    shutil.rmtree(output_base_folder)
 
     # Return the combined zip file as an attachment
     return send_file(
         final_zip_path,
         as_attachment=True,
-        download_name='all_files.zip',
+        download_name='common_files.zip',
         mimetype='application/zip'
     )
 
