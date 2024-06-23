@@ -77,19 +77,7 @@ def process_zip_files(collections_names):
             for collection_name, file_path in file_paths.items():
                 os.rename(file_path, os.path.join(common_folder, os.path.basename(file_path)))
 
-    # Remove all extracted files and folders
-    for target_collection_name in collections_names:
-        extracted_folder = f"{target_collection_name}_extracted"
-        if os.path.exists(extracted_folder):
-            shutil.rmtree(extracted_folder)
 
-    # Remove original zip folders
-    for target_collection_name in collections_names:
-        download_folder = f"{target_collection_name}_zip"
-        if os.path.exists(download_folder):
-            shutil.rmtree(download_folder)
-
-    print("All extracted files, folders, and original zip folders have been removed.")
     return output_base_folder
 
 # Route to display a welcoming message
